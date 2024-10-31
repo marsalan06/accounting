@@ -4,6 +4,8 @@ from django.contrib import admin
 from .models import Purchase, Order, OrderItem, FinalTally
 import csv
 from django.http import HttpResponse
+from django.contrib.auth.models import User
+
 
 # CSV Export Action
 
@@ -25,8 +27,6 @@ def export_as_csv(modeladmin, request, queryset):
 
 export_as_csv.short_description = "Export Selected as CSV"
 
-# Inline for OrderItem within Order
-
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -36,20 +36,38 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Purchase)
 class PurchaseAdmin(admin.ModelAdmin):
-    list_display = ('id', 'item', 'purchase_price',
-                    'sale_price', 'purchase_date', 'quantity')
-    search_fields = ('id', 'item')
-    list_filter = ('purchase_date',)
+    list_display = ('id', 'item', 'purchase_price', 'sale_price',
+                    'purchase_date', 'quantity', 'purchased_from', 'user')
+    search_fields = ('id', 'item', 'purchased_from')
+    list_filter = ('purchase_date', 'purchased_from')
     actions = [export_as_csv]
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "user" and not request.user.is_superuser:
+            kwargs["queryset"] = User.objects.filter(id=request.user.id)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs if request.user.is_superuser else qs.filter(user=request.user)
 
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'customer_name', 'date')
+    list_display = ('id', 'customer_name', 'date', 'user')
     search_fields = ('id', 'customer_name')
     list_filter = ('date',)
     inlines = [OrderItemInline]
     actions = [export_as_csv]
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "user" and not request.user.is_superuser:
+            kwargs["queryset"] = User.objects.filter(id=request.user.id)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs if request.user.is_superuser else qs.filter(user=request.user)
 
 
 @admin.register(OrderItem)
@@ -59,6 +77,15 @@ class OrderItemAdmin(admin.ModelAdmin):
     autocomplete_fields = ['order', 'purchase']
     actions = [export_as_csv]
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "order" and not request.user.is_superuser:
+            kwargs["queryset"] = Order.objects.filter(user=request.user)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs if request.user.is_superuser else qs.filter(order__user=request.user)
+
 
 @admin.register(FinalTally)
 class FinalTallyAdmin(admin.ModelAdmin):
@@ -66,3 +93,12 @@ class FinalTallyAdmin(admin.ModelAdmin):
                     'sell_amount', 'profit_loss')
     search_fields = ('order__id',)
     actions = [export_as_csv]
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "order" and not request.user.is_superuser:
+            kwargs["queryset"] = Order.objects.filter(user=request.user)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs if request.user.is_superuser else qs.filter(order__user=request.user)

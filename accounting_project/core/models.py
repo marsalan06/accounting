@@ -2,6 +2,7 @@
 
 import uuid
 from django.db import models
+from django.contrib.auth.models import User
 from django.db.models import Sum, F, DecimalField
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -15,6 +16,9 @@ class Purchase(models.Model):
     purchase_date = models.DateField()
     quantity = models.IntegerField(default=0)
     picture = models.ImageField(upload_to='pictures/', null=True, blank=True)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="purchases")
+    purchased_from = models.CharField(max_length=255)
 
     def __str__(self):
         return f"{self.item} ({self.id})"
@@ -24,6 +28,9 @@ class Order(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer_name = models.CharField(max_length=255)
     date = models.DateField(default=timezone.now)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="orders")
+    customer_details = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return f"Order {self.id} by {self.customer_name}"
