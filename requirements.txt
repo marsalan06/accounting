@@ -1,0 +1,10 @@
+altgraph==0.17.4
+asgiref==3.8.1
+Django==5.1.2
+django-jazzmin==3.0.1
+packaging==24.1
+pillow==11.0.0
+pyinstaller==6.11.0
+pyinstaller-hooks-contrib==2024.9
+sqlparse==0.5.1
+typing_extensions==4.12.2
